@@ -521,6 +521,7 @@
             // Strict checking against REQUIRED_EMAIL and REQUIRED_PASSWORD
             if (emailInput === REQUIRED_EMAIL && passwordInput === REQUIRED_PASSWORD) {
                 currentAuthenticatedSession = true;
+                localStorage.setItem('rentmaster_authenticated', 'true'); // Persist session on this device
                 document.getElementById('login-overlay').classList.add('hidden');
                 document.getElementById('app-container').classList.remove('hidden');
                 renderData();
@@ -532,6 +533,7 @@
         // Logout administrator safely
         function logoutAdmin() {
             currentAuthenticatedSession = false;
+            localStorage.removeItem('rentmaster_authenticated'); // Clear session
             document.getElementById('login-email').value = "";
             document.getElementById('login-password').value = "";
             document.getElementById('app-container').classList.add('hidden');
@@ -722,6 +724,7 @@
             res.innerText = `₹${((n-o)*FIXED_RATE).toLocaleString()}`;
         }
 
+        // Reset fields
         function resetCalc() {
             document.getElementById('calc-old').value = '';
             document.getElementById('calc-new').value = '';
@@ -865,6 +868,14 @@
             document.getElementById('admin-pin-field').value = adminSettings.pin;
             document.getElementById('admin-building-name').value = adminSettings.buildingName;
             
+            // Check device login session state on bootup
+            const authSaved = localStorage.getItem('rentmaster_authenticated') === 'true';
+            if (authSaved) {
+                currentAuthenticatedSession = true;
+                document.getElementById('login-overlay').classList.add('hidden');
+                document.getElementById('app-container').classList.remove('hidden');
+            }
+
             // Start sync
             initAuthAndSync();
         });
