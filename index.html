@@ -42,7 +42,10 @@
         }
     </style>
 </head>
-<body class="h-screen overflow-hidden flex flex-col bg-[#f8fafc]">
+<body class="h-screen overflow-hidden flex flex-col bg-[#f8fafc] relative">
+
+    <!-- Custom Toast Notifications Container -->
+    <div id="toast-container" class="fixed bottom-5 right-5 z-[2000] flex flex-col space-y-2 pointer-events-none"></div>
 
     <!-- Login Screen (Locked to single authorized credentials) -->
     <div id="login-overlay" class="fixed inset-0 bg-slate-900/90 backdrop-blur-lg z-[1000] flex items-center justify-center p-4">
@@ -132,9 +135,9 @@
             <header class="sticky top-0 z-10 bg-white/80 backdrop-blur-md border-b border-slate-200 px-6 md:px-8 py-4 md:py-5 flex justify-between items-center">
                 <div class="flex items-center space-x-4">
                     <h2 id="page-title" class="text-lg md:text-xl font-extrabold text-slate-800">Dashboard</h2>
-                    <div id="cloud-status-badge" class="flex items-center space-x-2 px-3 py-1 rounded-full text-[10px] md:text-xs font-semibold bg-amber-50 text-amber-600 border border-amber-100 transition-all duration-300">
+                    <div id="cloud-status-badge" class="flex items-center space-x-2 px-3 py-1 rounded-full text-[10px] md:text-xs font-semibold bg-amber-50 text-amber-600 border border-amber-100 transition-all duration-300 hover:bg-amber-100/50 cursor-pointer" title="Manage database connection">
                         <span class="w-2 h-2 rounded-full bg-amber-500 animate-pulse"></span>
-                        <span id="cloud-status-text">Cloud Sync Offline</span>
+                        <span id="cloud-status-text">Connecting Cloud...</span>
                     </div>
                 </div>
                 <div id="current-date" class="text-xs md:text-sm font-bold text-slate-500"></div>
@@ -144,6 +147,24 @@
                 
                 <!-- Dashboard -->
                 <div id="dashboard" class="tab-content active">
+                    
+                    <!-- Dynamic Cloud Setup Alert Banner (Shows when connection fails) -->
+                    <div id="offline-banner" class="mb-8 p-6 bg-amber-50 border border-amber-100 rounded-[1.5rem] md:rounded-[2rem] flex flex-col md:flex-row items-start md:items-center justify-between gap-4 hidden">
+                        <div class="flex items-center space-x-4">
+                            <div class="p-3.5 bg-amber-100 text-amber-800 rounded-2xl">
+                                <i data-lucide="cloud-off" size="24"></i>
+                            </div>
+                            <div>
+                                <h4 class="font-extrabold text-slate-800 text-base">Offline Mode Enabled</h4>
+                                <p class="text-slate-500 text-xs font-medium mt-0.5 leading-relaxed">Your data is securely saved inside local browser storage. Connect to Firebase Cloud to securely share data across multiple devices.</p>
+                            </div>
+                        </div>
+                        <button onclick="showTab('admin');" class="bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold px-5 py-3 rounded-xl transition-all whitespace-nowrap shadow-md shadow-amber-600/10 flex items-center space-x-2">
+                            <i data-lucide="cloud" size="14"></i>
+                            <span>Configure Cloud Sync</span>
+                        </button>
+                    </div>
+
                     <div class="grid grid-cols-1 md:grid-cols-3 gap-6 md:gap-8 mb-10">
                         <div class="bg-white p-6 md:p-8 rounded-[1.5rem] md:rounded-[2rem] shadow-sm border border-slate-100 card-hover">
                             <div class="flex justify-between items-start mb-4">
@@ -250,7 +271,7 @@
                 </div>
 
                 <!-- Admin -->
-                <div id="admin" class="tab-content">
+                <div id="admin" class="tab-content space-y-8">
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-8">
                         <div class="bg-white p-6 md:p-8 rounded-[1.5rem] md:rounded-[2rem] shadow-sm border border-slate-100">
                             <div class="flex items-center space-x-4 mb-6">
@@ -278,6 +299,41 @@
                                 <button onclick="requestAuthAction('reset-payments')" class="w-full bg-rose-100 text-rose-600 p-3.5 md:p-4 rounded-xl font-bold text-xs hover:bg-rose-600 hover:text-white transition-all">Reset Monthly Payments</button>
                                 <button onclick="requestAuthAction('factory-reset')" class="w-full bg-rose-600 text-white p-3.5 md:p-4 rounded-xl font-bold text-xs shadow-lg shadow-rose-200">Delete All Data</button>
                             </div>
+                        </div>
+                    </div>
+
+                    <!-- Cloud Database Settings -->
+                    <div class="bg-white p-6 md:p-8 rounded-[1.5rem] md:rounded-[2rem] shadow-sm border border-slate-100">
+                        <div class="flex items-center space-x-4 mb-4">
+                            <div class="p-3 bg-indigo-50 text-indigo-600 rounded-xl"><i data-lucide="cloud"></i></div>
+                            <h3 class="text-lg md:text-xl font-black text-slate-800">Firebase Cloud Config</h3>
+                        </div>
+                        <p class="text-xs text-slate-500 mb-6 font-medium leading-relaxed">
+                            Aap yahan se custom Firebase keys configure kar sakte hain. Keys enter karne se aapka local system safe environment me connect ho jayega.
+                        </p>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                            <div>
+                                <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 block">API Key</label>
+                                <input id="fb-api-key" type="password" placeholder="AIzaSy..." class="w-full p-3.5 bg-slate-50 border border-slate-100 rounded-xl text-xs font-semibold outline-none focus:border-indigo-500">
+                            </div>
+                            <div>
+                                <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 block">Project ID</label>
+                                <input id="fb-project-id" type="text" placeholder="rentmaster-pro-..." class="w-full p-3.5 bg-slate-50 border border-slate-100 rounded-xl text-xs font-semibold outline-none focus:border-indigo-500">
+                            </div>
+                        </div>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                            <div>
+                                <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 block">Auth Domain</label>
+                                <input id="fb-auth-domain" type="text" placeholder="project.firebaseapp.com" class="w-full p-3.5 bg-slate-50 border border-slate-100 rounded-xl text-xs font-semibold outline-none focus:border-indigo-500">
+                            </div>
+                            <div>
+                                <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 block">App ID</label>
+                                <input id="fb-app-id" type="text" placeholder="1:12345:web:abcde1234" class="w-full p-3.5 bg-slate-50 border border-slate-100 rounded-xl text-xs font-semibold outline-none focus:border-indigo-500">
+                            </div>
+                        </div>
+                        <div class="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-3">
+                            <button onclick="saveFirebaseClientConfig()" class="bg-indigo-600 text-white px-6 py-3.5 rounded-xl font-bold text-xs shadow-md shadow-indigo-200">Save & Apply Config</button>
+                            <button onclick="clearFirebaseClientConfig()" class="bg-slate-100 text-slate-600 px-6 py-3.5 rounded-xl font-bold text-xs">Reset to Default Keys</button>
                         </div>
                     </div>
                 </div>
@@ -348,7 +404,7 @@
     <!-- Core Script utilizing Firebase and modern module imports -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, doc, setDoc, getDoc, collection, onSnapshot, updateDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         const FIXED_RATE = 8;
@@ -357,9 +413,47 @@
         const REQUIRED_EMAIL = "krishna.tech1608@gmail.com";
         const REQUIRED_PASSWORD = "@145-rent";
 
-        // Custom Firebase configuration provided by the user
-        const firebaseConfig = {
-            apiKey: "AIzaSyBXcwHOEvlZID5T0XxuJRe_OXmjrLeGFiA",
+        // Custom Premium Toast System
+        function showToast(message, type = "info") {
+            const container = document.getElementById('toast-container');
+            if (!container) return;
+            
+            const toast = document.createElement('div');
+            let bgClass = "bg-slate-900 text-white";
+            let iconName = "info";
+            
+            if (type === "success") {
+                bgClass = "bg-emerald-600 text-white shadow-xl shadow-emerald-600/10";
+                iconName = "check-circle";
+            } else if (type === "error") {
+                bgClass = "bg-rose-600 text-white shadow-xl shadow-rose-600/10";
+                iconName = "alert-triangle";
+            }
+            
+            toast.className = `${bgClass} px-5 py-4 rounded-2xl shadow-2xl flex items-center space-x-3 text-sm font-semibold transition-all duration-300 transform translate-y-10 opacity-0 pointer-events-auto`;
+            toast.innerHTML = `
+                <i data-lucide="${iconName}" size="18"></i>
+                <span>${message}</span>
+            `;
+            container.appendChild(toast);
+            lucide.createIcons();
+            
+            setTimeout(() => {
+                toast.classList.remove('translate-y-10', 'opacity-0');
+            }, 10);
+            
+            setTimeout(() => {
+                toast.classList.add('translate-y-10', 'opacity-0');
+                setTimeout(() => toast.remove(), 300);
+            }, 3500);
+        }
+
+        // Setup Secure Firebase Configuration
+        // Initial setup has empty apiKey to comply with security standards.
+        // It will load dynamically from `__firebase_config` if provided by host/platform, 
+        // or can be safely saved by the administrator locally in-app.
+        let firebaseConfig = {
+            apiKey: "", 
             authDomain: "rentmaster-pro-cfda7.firebaseapp.com",
             projectId: "rentmaster-pro-cfda7",
             storageBucket: "rentmaster-pro-cfda7.firebasestorage.app",
@@ -367,8 +461,27 @@
             appId: "1:691126633800:web:dc268f01532811c31c5f7d"
         };
 
+        // Try dynamically pulling config injected by platform environment parameters (RULE 3 compliance)
+        try {
+            if (typeof __firebase_config !== 'undefined' && __firebase_config) {
+                firebaseConfig = typeof __firebase_config === 'string' ? JSON.parse(__firebase_config) : __firebase_config;
+            }
+        } catch (e) {
+            console.warn("Injected config parsing skipped:", e);
+        }
+
+        // Try loading custom admin configurations secure local cache
+        try {
+            const storedConfig = localStorage.getItem('rentmaster_secure_fb_config');
+            if (storedConfig) {
+                firebaseConfig = JSON.parse(storedConfig);
+            }
+        } catch (e) {
+            console.warn("Local storage config parsing skipped:", e);
+        }
+
         // Environment Details (Unique App ID)
-        const appId = "rentmaster-pro-cfda7";
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'rentmaster-pro-cfda7';
         let db = null;
         let auth = null;
         let isFirebaseConnected = false;
@@ -385,44 +498,52 @@
         let pendingId = null;
         let activeTabId = 'dashboard';
 
-        // Initialize Firebase safely using hardcoded configuration
-        try {
-            const app = initializeApp(firebaseConfig);
-            auth = getAuth(app);
-            db = getFirestore(app);
-            isFirebaseConnected = true;
-        } catch (err) {
-            console.error("Firebase startup failed, switching to Local Storage.", err);
-            isFirebaseConnected = false;
+        // Initialize Firebase securely
+        if (firebaseConfig && firebaseConfig.apiKey) {
+            try {
+                const app = initializeApp(firebaseConfig);
+                auth = getAuth(app);
+                db = getFirestore(app);
+                isFirebaseConnected = true;
+            } catch (err) {
+                console.error("Firebase startup failed, switching to Local Storage.", err);
+                isFirebaseConnected = false;
+            }
         }
 
         // --- AUTH & CLOUD INITIALIZER ---
         async function initAuthAndSync() {
-            if (!isFirebaseConnected) {
+            if (!isFirebaseConnected || !auth) {
                 setCloudBadgeStatus("local");
                 return;
             }
 
             setCloudBadgeStatus("connecting");
             try {
-                // Anonymous auth try block to authorize Firestore securely
-                await signInAnonymously(auth);
+                if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                    await signInWithCustomToken(auth, __initial_auth_token);
+                } else {
+                    await signInAnonymously(auth);
+                }
             } catch (err) {
-                console.warn("Auth initialization failed. Intercepting configuration.", err);
+                console.warn("Auth initialization failed. Graceful recovery...", err);
                 
-                // fallback gracefully
                 if (err.code === 'auth/admin-restricted-operation' || err.message.includes('admin-restricted-operation')) {
                     setCloudBadgeStatus("connected", "Local Auth Mode");
                     listenToCloudData();
                     return;
                 }
 
-                // Retry cycle for network issues
+                // Retry protocol
                 let retryDelay = 1000;
                 for (let i = 0; i < 5; i++) {
                     try {
                         await new Promise(res => setTimeout(res, retryDelay));
-                        await signInAnonymously(auth);
+                        if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                            await signInWithCustomToken(auth, __initial_auth_token);
+                        } else {
+                            await signInAnonymously(auth);
+                        }
                         break;
                     } catch (retryErr) {
                         retryDelay *= 2;
@@ -449,26 +570,35 @@
         function setCloudBadgeStatus(status, customText = "") {
             const badge = document.getElementById('cloud-status-badge');
             const text = document.getElementById('cloud-status-text');
+            const banner = document.getElementById('offline-banner');
             if (!badge || !text) return;
 
-            // Reset event handlers
-            badge.onclick = null;
-            badge.title = "";
+            badge.onclick = () => {
+                showTab('admin');
+                setTimeout(() => {
+                    document.getElementById('fb-api-key')?.scrollIntoView({ behavior: 'smooth' });
+                }, 100);
+            };
 
             if (status === "connecting") {
-                badge.className = "flex items-center space-x-2 px-3 py-1 rounded-full text-xs font-semibold bg-amber-50 text-amber-600 border border-amber-100";
+                badge.className = "flex items-center space-x-2 px-3 py-1 rounded-full text-xs font-semibold bg-amber-50 text-amber-600 border border-amber-100 hover:bg-amber-100/50 cursor-pointer";
                 text.innerText = customText || "Connecting Cloud...";
+                if (banner) banner.classList.add('hidden');
             } else if (status === "connected") {
-                badge.className = "flex items-center space-x-2 px-3 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-600 border border-emerald-100";
+                badge.className = "flex items-center space-x-2 px-3 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-600 border border-emerald-100 hover:bg-emerald-100/50 cursor-pointer";
                 text.innerText = customText || "Cloud Synced";
+                if (banner) banner.classList.add('hidden');
             } else {
-                badge.className = "flex items-center space-x-2 px-3 py-1 rounded-full text-xs font-semibold bg-slate-100 text-slate-600 border border-slate-200";
+                badge.className = "flex items-center space-x-2 px-3 py-1 rounded-full text-xs font-semibold bg-slate-100 text-slate-600 border border-slate-200 hover:bg-slate-200/50 cursor-pointer";
                 text.innerText = "Offline Mode (LocalStorage)";
+                if (banner && currentAuthenticatedSession) banner.classList.remove('hidden');
             }
         }
 
         // Set up Real-time listeners (RULE 1 & RULE 2)
         function listenToCloudData() {
+            if (!db) return;
+
             // Global Settings Sync
             const settingsDocRef = doc(db, 'artifacts', appId, 'public', 'data', 'settings', 'admin');
             onSnapshot(settingsDocRef, (docSnap) => {
@@ -476,7 +606,6 @@
                     adminSettings = docSnap.data();
                     localStorage.setItem('rentmaster_admin', JSON.stringify(adminSettings));
                     
-                    // Sync values with settings tab UI
                     const adminPin = document.getElementById('admin-pin-field');
                     const adminBuilding = document.getElementById('admin-building-name');
                     if (adminPin) adminPin.value = adminSettings.pin;
@@ -518,32 +647,38 @@
             const emailInput = document.getElementById('login-email').value.trim();
             const passwordInput = document.getElementById('login-password').value;
 
-            // Strict checking against REQUIRED_EMAIL and REQUIRED_PASSWORD
             if (emailInput === REQUIRED_EMAIL && passwordInput === REQUIRED_PASSWORD) {
                 currentAuthenticatedSession = true;
-                localStorage.setItem('rentmaster_authenticated', 'true'); // Persist session on this device
+                localStorage.setItem('rentmaster_authenticated', 'true');
                 document.getElementById('login-overlay').classList.add('hidden');
                 document.getElementById('app-container').classList.remove('hidden');
+                
+                const banner = document.getElementById('offline-banner');
+                if (!isFirebaseConnected && banner) {
+                    banner.classList.remove('hidden');
+                }
+                
+                showToast("Admin successfully authenticated!", "success");
                 renderData();
             } else {
-                alert("Galat Email ID ya Password enter kiya hai! Kripya sahi credentials use karein.");
+                showToast("Incorrect Email ID or Password!", "error");
             }
         });
 
         // Logout administrator safely
         function logoutAdmin() {
             currentAuthenticatedSession = false;
-            localStorage.removeItem('rentmaster_authenticated'); // Clear session
+            localStorage.removeItem('rentmaster_authenticated');
             document.getElementById('login-email').value = "";
             document.getElementById('login-password').value = "";
             document.getElementById('app-container').classList.add('hidden');
             document.getElementById('login-overlay').classList.remove('hidden');
+            showToast("Successfully logged out safely.", "success");
         }
 
         // Helper writes to handle local or cloud modes smoothly
         async function saveRoomData(roomObj) {
-            // Try updating Firestore directly; fall back locally if rules block
-            if (isFirebaseConnected) {
+            if (isFirebaseConnected && db) {
                 try {
                     const roomDocRef = doc(db, 'artifacts', appId, 'public', 'data', 'rooms', String(roomObj.id));
                     await setDoc(roomDocRef, roomObj);
@@ -564,7 +699,7 @@
         }
 
         async function deleteRoomData(id) {
-            if (isFirebaseConnected) {
+            if (isFirebaseConnected && db) {
                 try {
                     const roomDocRef = doc(db, 'artifacts', appId, 'public', 'data', 'rooms', String(id));
                     await deleteDoc(roomDocRef);
@@ -580,19 +715,19 @@
         }
 
         async function saveSettingsData() {
-            if (isFirebaseConnected) {
+            if (isFirebaseConnected && db) {
                 try {
                     const settingsDocRef = doc(db, 'artifacts', appId, 'public', 'data', 'settings', 'admin');
                     await setDoc(settingsDocRef, adminSettings);
-                    alert("Settings Updated successfully on Cloud!");
+                    showToast("Settings updated successfully on Cloud!", "success");
                 } catch (err) {
                     console.error("Error writing settings to cloud:", err);
                     localStorage.setItem('rentmaster_admin', JSON.stringify(adminSettings));
-                    alert("Settings saved locally!");
+                    showToast("Settings saved locally!", "success");
                 }
             } else {
                 localStorage.setItem('rentmaster_admin', JSON.stringify(adminSettings));
-                alert("Settings saved locally!");
+                showToast("Settings saved locally!", "success");
             }
         }
 
@@ -615,7 +750,7 @@
                 executeAction();
                 closeAuthModal();
             } else {
-                alert("Incorrect PIN! Access denied.");
+                showToast("Incorrect PIN! Access denied.", "error");
             }
         }
 
@@ -623,11 +758,12 @@
             switch(pendingAction) {
                 case 'edit-tenant': original_openEditModal(pendingId); break;
                 case 'view-tenant': original_viewDetails(pendingId); break;
-                case 'delete-tenant': await deleteRoomData(pendingId); break;
+                case 'delete-tenant': await deleteRoomData(pendingId); showToast("Tenant record removed successfully.", "success"); break;
                 case 'reset-payments': 
                     for (const r of rooms) {
                         await saveRoomData({...r, isPaid: false});
                     }
+                    showToast("Monthly rental statuses have been reset.", "success");
                     break;
                 case 'factory-reset': 
                     if (isFirebaseConnected) {
@@ -636,7 +772,8 @@
                         }
                     }
                     localStorage.clear(); 
-                    location.reload(); 
+                    showToast("Factory reset complete. Restarting application...", "success");
+                    setTimeout(() => location.reload(), 1500);
                     break;
             }
         }
@@ -722,6 +859,7 @@
             const res = document.getElementById('calc-result');
             area.classList.remove('hidden');
             res.innerText = `₹${((n-o)*FIXED_RATE).toLocaleString()}`;
+            showToast("Electricity units calculated successfully.");
         }
 
         // Reset fields
@@ -735,6 +873,42 @@
             adminSettings.pin = document.getElementById('admin-pin-field').value;
             adminSettings.buildingName = document.getElementById('admin-building-name').value;
             saveSettingsData();
+        }
+
+        // Save & reload custom client Firebase configurations securely
+        function saveFirebaseClientConfig() {
+            const apiKey = document.getElementById('fb-api-key').value.trim();
+            const projectId = document.getElementById('fb-project-id').value.trim();
+            const authDomain = document.getElementById('fb-auth-domain').value.trim();
+            const appId = document.getElementById('fb-app-id').value.trim();
+
+            if (!apiKey || !projectId) {
+                showToast("Please enter both API Key and Project ID!", "error");
+                return;
+            }
+
+            const config = {
+                apiKey,
+                projectId,
+                authDomain: authDomain || `${projectId}.firebaseapp.com`,
+                appId,
+                storageBucket: `${projectId}.firebasestorage.app`
+            };
+
+            localStorage.setItem('rentmaster_secure_fb_config', JSON.stringify(config));
+            showToast("Firebase Config saved securely! Reloading...", "success");
+            setTimeout(() => {
+                location.reload();
+            }, 1500);
+        }
+
+        // Reset config
+        function clearFirebaseClientConfig() {
+            localStorage.removeItem('rentmaster_secure_fb_config');
+            showToast("Firebase configuration cleared! Reloading default config...", "success");
+            setTimeout(() => {
+                location.reload();
+            }, 1500);
         }
 
         // Update single fields
@@ -751,11 +925,11 @@
             if (room) {
                 room.isPaid = !room.isPaid;
                 await saveRoomData(room);
+                showToast(`Room ${room.roomNo} marked as ${room.isPaid ? 'Paid' : 'Unpaid'}.`, "success");
             }
         }
 
         function renderData() {
-            // Safety check to prevent UI generation before valid login auth
             if (!currentAuthenticatedSession) return;
 
             const revenue = rooms.filter(r => r.isPaid).reduce((acc, r) => acc + r.rent + (((r.currentUnit || r.lastUnit) - r.lastUnit) * FIXED_RATE), 0);
@@ -839,9 +1013,11 @@
             if(id) {
                 const existing = rooms.find(r => r.id == id);
                 await saveRoomData({ ...existing, ...data });
+                showToast("Tenant details updated successfully.", "success");
             } else {
                 const newId = Date.now();
                 await saveRoomData({ id: newId, ...data, currentUnit: data.lastUnit, isPaid: false });
+                showToast("New tenant registered successfully.", "success");
             }
 
             toggleModal('roomModal');
@@ -857,6 +1033,8 @@
         window.runManualCalc = runManualCalc;
         window.resetCalc = resetCalc;
         window.saveAdminSettings = saveAdminSettings;
+        window.saveFirebaseClientConfig = saveFirebaseClientConfig;
+        window.clearFirebaseClientConfig = clearFirebaseClientConfig;
         window.openAddModal = openAddModal;
         window.togglePaid = togglePaid;
         window.updateUnits = updateUnits;
@@ -867,6 +1045,18 @@
             document.getElementById('current-date').innerText = new Date().toDateString();
             document.getElementById('admin-pin-field').value = adminSettings.pin;
             document.getElementById('admin-building-name').value = adminSettings.buildingName;
+
+            // Fill Firebase Config settings in fields if populated
+            if (firebaseConfig) {
+                const apiKeyEl = document.getElementById('fb-api-key');
+                const projIdEl = document.getElementById('fb-project-id');
+                const authDomEl = document.getElementById('fb-auth-domain');
+                const appIdEl = document.getElementById('fb-app-id');
+                if (apiKeyEl) apiKeyEl.value = firebaseConfig.apiKey || "";
+                if (projIdEl) projIdEl.value = firebaseConfig.projectId || "";
+                if (authDomEl) authDomEl.value = firebaseConfig.authDomain || "";
+                if (appIdEl) appIdEl.value = firebaseConfig.appId || "";
+            }
             
             // Check device login session state on bootup
             const authSaved = localStorage.getItem('rentmaster_authenticated') === 'true';
